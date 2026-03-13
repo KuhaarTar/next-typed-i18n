@@ -9,8 +9,10 @@ jobs:
   publish:
     name: Build & Publish
     runs-on: ubuntu-latest
+    environment: npm
     permissions:
-      contents: write # needed to create GitHub release
+      contents: write  # needed to create GitHub release
+      id-token: write  # needed for OIDC trusted publishing
 
     steps:
       - name: Checkout
@@ -46,9 +48,7 @@ jobs:
           echo "Version match: $PKG_VERSION"
 
       - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

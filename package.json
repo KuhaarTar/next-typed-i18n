@@ -1,6 +1,6 @@
 {
   "name": "next-typed-i18n",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Type-safe, zero-config i18n for Next.js App Router with automatic locale detection, server/client dictionary loading, and middleware — all in one factory function.",
   "keywords": [
     "next.js",

@@ -1,16 +1,15 @@
-name: Publish to npm
+name: CI
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
 
 jobs:
-  publish:
-    name: Build & Publish
+  ci:
+    name: Lint & Build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # needed to create GitHub release
 
     steps:
       - name: Checkout
@@ -18,15 +17,12 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-          registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -37,24 +33,9 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Verify version matches tag
+      - name: Check dist output
         run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
-            echo "package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
-            exit 1
-          fi
-          echo "Version match: $PKG_VERSION"
-
-      - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
+          test -f dist/index.js   || (echo "Missing dist/index.js"   && exit 1)
+          test -f dist/index.mjs  || (echo "Missing dist/index.mjs"  && exit 1)
+          test -f dist/index.d.ts || (echo "Missing dist/index.d.ts" && exit 1)
+          echo "All dist files present"

@@ -14,16 +14,16 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/KuhaarTar/next-typed-i18n"
+    "url": "git+https://github.com/KuhaarTar/next-typed-i18n.git"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "files": [

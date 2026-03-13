@@ -1,19 +1,16 @@
 name: Publish to npm
-
 on:
   push:
     tags:
       - "v*.*.*"
-
 jobs:
   publish:
     name: Build & Publish
     runs-on: ubuntu-latest
     environment: npm
     permissions:
-      contents: write  # needed to create GitHub release
-      id-token: write  # needed for OIDC trusted publishing
-
+      contents: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +43,10 @@ jobs:
             exit 1
           fi
           echo "Version match: $PKG_VERSION"
+
+      # ADD THIS STEP
+      - name: Update npm for OIDC support
+        run: npm install -g npm@latest
 
       - name: Publish to npm
         run: npm publish --access public --provenance

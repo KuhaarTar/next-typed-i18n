@@ -4,7 +4,8 @@ Type-safe, zero-config i18n for **Next.js App Router**. One factory function giv
 
 ## Features
 
-- **Full type safety** — `Dictionary` type is inferred directly from your JSON files
+- **Zero-config loading** — drop JSON files in `/dictionary`, no loader setup required
+- **Full type safety** — `Dictionary` type is inferred directly from your JSON files when using custom loaders
 - **No prop drilling** — `getLocale()` and `getDictionary()` work anywhere in Server Components
 - **Client hook** — `useDictionary()` uses React `use()` + promise caching, never re-fetches
 - **Middleware included** — locale detection and redirect in one line
@@ -22,14 +23,16 @@ pnpm add next-typed-i18n
 
 ### 1. Create your dictionaries
 
+By default the library looks for `[locale].json` files in `/dictionary` (or `/src/dictionary`):
+
 ```
-dictionaries/
+dictionary/
   en.json
   uk.json
 ```
 
 ```json
-// dictionaries/en.json
+// dictionary/en.json
 {
   "header": { "nav": { "home": "Home", "about": "About" } },
   "hero": { "title": "Welcome", "cta": "Get Started" }
@@ -37,6 +40,8 @@ dictionaries/
 ```
 
 ### 2. Create your i18n instance
+
+**Zero-config** — no loaders needed, files are loaded automatically from the `dictionary` folder:
 
 ```ts
 // lib/i18n.ts
@@ -54,15 +59,25 @@ export const {
   defaultLocale,
 } = createI18n({
   locales: ['en', 'uk'] as const,
-  defaultLocale: 'uk',
+  defaultLocale: 'en',
+})
+```
+
+**With custom loaders** — get full TypeScript inference from your JSON shapes:
+
+```ts
+// lib/i18n.ts
+import { createI18n } from 'next-typed-i18n'
+
+export const { getDictionary, useDictionary, ...rest } = createI18n({
+  locales: ['en', 'uk'] as const,
+  defaultLocale: 'en',
   loaders: {
-    en: () => import('../dictionaries/en.json').then((m) => m.default),
-    uk: () => import('../dictionaries/uk.json').then((m) => m.default),
+    en: () => import('../dictionary/en.json').then((m) => m.default),
+    uk: () => import('../dictionary/uk.json').then((m) => m.default),
   },
 })
 
-// Export inferred types for use across the app
-export type Locale = 'en' | 'uk'
 export type Dictionary = Awaited<ReturnType<typeof getDictionary>>
 ```
 
@@ -78,7 +93,7 @@ export { middleware, middlewareConfig as config } from '@/lib/i18n'
 ```tsx
 // app/[lang]/layout.tsx
 import { setLocale, getStaticParams } from '@/lib/i18n'
-import type { Locale } from '@/lib/i18n'
+import type { Locale } from 'next-typed-i18n'
 
 export function generateStaticParams() {
   return getStaticParams() // [{ lang: 'en' }, { lang: 'uk' }]
@@ -89,10 +104,10 @@ export default async function RootLayout({
   params,
 }: {
   children: React.ReactNode
-  params: Promise<{ lang: Locale }>
+  params: Promise<{ lang: string }>
 }) {
   const { lang } = await params
-  setLocale(lang) // must be called before any getDictionary()
+  setLocale(lang)
 
   return (
     <html lang={lang}>
@@ -111,11 +126,11 @@ import { getDictionary } from '@/lib/i18n'
 export default async function HomePage() {
   const dict = await getDictionary() // locale auto-detected from setLocale()
 
-  return <h1>{dict.hero.title}</h1> // fully typed
+  return <h1>{dict.hero.title}</h1>
 }
 ```
 
-Or pass locale explicitly (useful inside `generateStaticParams`):
+Pass locale explicitly when needed (e.g. inside `generateStaticParams`):
 
 ```tsx
 const dict = await getDictionary('en')
@@ -134,7 +149,7 @@ export function Header() {
 }
 ```
 
-Wrap with `<Suspense>` somewhere in the tree above:
+Wrap with `<Suspense>` somewhere above in the tree:
 
 ```tsx
 <Suspense fallback={<HeaderSkeleton />}>
@@ -146,27 +161,31 @@ Wrap with `<Suspense>` somewhere in the tree above:
 
 ### `createI18n(config)`
 
-| Option          | Type                               | Description                                    |
-| --------------- | ---------------------------------- | ---------------------------------------------- |
-| `locales`       | `readonly string[]`                | All supported locale strings. Use `as const`.  |
-| `defaultLocale` | `string`                           | Fallback locale for redirects and build time.  |
-| `loaders`       | `Record<locale, () => Promise<T>>` | Async functions that return the dictionary.    |
+| Option           | Type                               | Default                              | Description                                         |
+| ---------------- | ---------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| `locales`        | `readonly string[]`                | —                                    | All supported locale strings. Use `as const`.       |
+| `defaultLocale`  | `string`                           | —                                    | Fallback locale for redirects and build time.       |
+| `loaders`        | `Record<locale, () => Promise<T>>` | auto-discovered from `dictionaryPath`| Async functions that return the dictionary.         |
+| `dictionaryPath` | `string`                           | `"dictionary"` or `"src/dictionary"` | Path to JSON files. Absolute or relative to `cwd`. |
+| `debug`          | `boolean`                          | `false`                              | Log warnings and info to the console.               |
 
 Returns an object with:
 
-| Export             | Where       | Description                                                      |
-| ------------------ | ----------- | ---------------------------------------------------------------- |
-| `setLocale(lang)`  | Server      | Set request locale. Call in layout before anything else.         |
-| `getLocale()`      | Server      | Get request locale. Cached with React `cache()`.                 |
-| `getDictionary(lang?)` | Server  | Load dictionary. Auto-detects locale when `lang` is omitted.    |
-| `useDictionary()`  | Client      | Hook: reads locale from pathname, returns typed dictionary.      |
-| `middleware(req)`  | Middleware  | Redirects requests missing a locale prefix to the default.       |
-| `middlewareConfig` | Middleware  | The `config` export with the recommended matcher pattern.         |
-| `getStaticParams(paramName?)` | Server | Returns `[{ lang: 'en' }, ...]` for `generateStaticParams`. |
-| `locales`          | Both        | The configured locale array.                                     |
-| `defaultLocale`    | Both        | The configured default locale string.                            |
+| Export                        | Where      | Description                                                       |
+| ----------------------------- | ---------- | ----------------------------------------------------------------- |
+| `setLocale(lang)`             | Server     | Set request locale. Call in layout before anything else.          |
+| `getLocale()`                 | Server     | Get request locale. Cached with React `cache()`.                  |
+| `getDictionary(lang?)`        | Server     | Load dictionary. Auto-detects locale when `lang` is omitted.      |
+| `useDictionary()`             | Client     | Hook: reads locale from pathname, returns typed dictionary.       |
+| `middleware(req)`             | Middleware | Redirects requests missing a locale prefix to the default.        |
+| `middlewareConfig`            | Middleware | The `config` export with the recommended matcher pattern.         |
+| `getStaticParams(paramName?)` | Server     | Returns `[{ lang: 'en' }, ...]` for `generateStaticParams`.      |
+| `locales`                     | Both       | The configured locale array.                                      |
+| `defaultLocale`               | Both       | The configured default locale string.                             |
 
 ## How it works
+
+**Auto-loading:** When no `loaders` are provided, the library looks for `[locale].json` files in `{cwd}/dictionary/`, then `{cwd}/src/dictionary/`. Files are read via `fs` on the server at request time. Use `dictionaryPath` to point to a custom folder.
 
 **Server side:** `setLocale()` writes to a module-level variable. Next.js creates a new module scope per request (with the Node.js runtime), so this is request-isolated. `getLocale()` is wrapped in React's `cache()` to ensure the value is stable within one render pass and can be read from any Server Component without prop drilling.
 

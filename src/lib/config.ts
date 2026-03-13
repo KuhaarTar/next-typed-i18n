@@ -1,0 +1,1 @@
+export const PREFIX = "[next-typed-i18n]"

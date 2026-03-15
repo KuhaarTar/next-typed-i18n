@@ -1,7 +1,7 @@
 {
   "name": "next-typed-i18n",
   "version": "0.1.6",
-  "description": "Type-safe, zero-config i18n for Next.js App Router with automatic locale detection, server/client dictionary loading, and middleware — all in one factory function.",
+  "description": "Type-safe, zero-config i18n for Next.js App Router with automatic locale detection, server/client dictionary loading, and middleware.",
   "keywords": [
     "next.js",
     "i18n",
@@ -24,14 +24,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.mjs",
+      "require": "./dist/client.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/client.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts src/client.ts --format cjs,esm --dts --watch",
     "lint": "tsc --noEmit",
     "prepublishOnly": "pnpm build"
   },

@@ -1,7 +1,6 @@
 import { I18nLogger } from "./lib/logger";
 import { createLocale } from "./locale";
 import { createDictionary } from "./dictionary";
-import { createHooks } from "./hooks";
 import { createMiddleware } from "./middleware";
 import { createStaticParams } from "./static-params";
 import { createDefaultLoaders } from "./default-loaders";
@@ -17,7 +16,6 @@ export function createI18n<
 
   const { setLocale, getLocale } = createLocale(resolvedConfig);
   const { getDictionary } = createDictionary(resolvedConfig, getLocale, logger);
-  const { useDictionary } = createHooks(resolvedConfig);
   const { middleware, middlewareConfig } = createMiddleware(resolvedConfig);
   const { getStaticParams } = createStaticParams(resolvedConfig);
 
@@ -25,7 +23,6 @@ export function createI18n<
     setLocale,
     getLocale,
     getDictionary,
-    useDictionary,
     middleware,
     middlewareConfig,
     getStaticParams,

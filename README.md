@@ -1,6 +1,6 @@
 # next-typed-i18n
 
-Type-safe, zero-config i18n for **Next.js App Router**. One factory function gives you everything: locale detection, server/client dictionary loading, middleware, and full TypeScript inference from your JSON files — no code generation, no config files.
+Type-safe, zero-config i18n for **Next.js App Router**. One shared config gives you everything: locale detection, server/client dictionary loading, middleware, and full TypeScript inference from your JSON files — no code generation, no config files.
 
 ## Features
 
@@ -46,21 +46,25 @@ dictionary/
 ```ts
 // lib/i18n.ts
 import { createI18n } from 'next-typed-i18n'
+import { createI18nClient } from 'next-typed-i18n/client'
+
+const config = {
+  locales: ['en', 'uk'] as const,
+  defaultLocale: 'en',
+}
 
 export const {
   setLocale,
   getLocale,
   getDictionary,
-  useDictionary,
   middleware,
   middlewareConfig,
   getStaticParams,
   locales,
   defaultLocale,
-} = createI18n({
-  locales: ['en', 'uk'] as const,
-  defaultLocale: 'en',
-})
+} = createI18n(config)
+
+export const { useDictionary } = createI18nClient(config)
 ```
 
 **With custom loaders** — get full TypeScript inference from your JSON shapes:
@@ -68,15 +72,19 @@ export const {
 ```ts
 // lib/i18n.ts
 import { createI18n } from 'next-typed-i18n'
+import { createI18nClient } from 'next-typed-i18n/client'
 
-export const { getDictionary, useDictionary, ...rest } = createI18n({
+const config = {
   locales: ['en', 'uk'] as const,
   defaultLocale: 'en',
   loaders: {
     en: () => import('../dictionary/en.json').then((m) => m.default),
     uk: () => import('../dictionary/uk.json').then((m) => m.default),
   },
-})
+}
+
+export const { getDictionary, ...rest } = createI18n(config)
+export const { useDictionary } = createI18nClient(config)
 
 export type Dictionary = Awaited<ReturnType<typeof getDictionary>>
 ```
@@ -157,6 +165,8 @@ Wrap with `<Suspense>` somewhere above in the tree:
 </Suspense>
 ```
 
+The client hook must be created from `next-typed-i18n/client`, while the root `next-typed-i18n` entry stays server-safe.
+
 ## API Reference
 
 ### `createI18n(config)`
@@ -176,12 +186,19 @@ Returns an object with:
 | `setLocale(lang)`             | Server     | Set request locale. Call in layout before anything else.          |
 | `getLocale()`                 | Server     | Get request locale. Cached with React `cache()`.                  |
 | `getDictionary(lang?)`        | Server     | Load dictionary. Auto-detects locale when `lang` is omitted.      |
-| `useDictionary()`             | Client     | Hook: reads locale from pathname, returns typed dictionary.       |
 | `middleware(req)`             | Middleware | Redirects requests missing a locale prefix to the default.        |
 | `middlewareConfig`            | Middleware | The `config` export with the recommended matcher pattern.         |
 | `getStaticParams(paramName?)` | Server     | Returns `[{ lang: 'en' }, ...]` for `generateStaticParams`.      |
 | `locales`                     | Both       | The configured locale array.                                      |
 | `defaultLocale`               | Both       | The configured default locale string.                             |
+
+### `createI18nClient(config)`
+
+Returns an object with:
+
+| Export            | Where  | Description                                                 |
+| ----------------- | ------ | ----------------------------------------------------------- |
+| `useDictionary()` | Client | Hook: reads locale from pathname, returns typed dictionary. |
 
 ## How it works
 
